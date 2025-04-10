@@ -1,6 +1,6 @@
-import { executeQuery } from "../db/connection.js";
-import { logRed } from "../funciones/logsCustom.js";
-import Favorito from "../models/Favorito.js";
+import { executeQuery } from "../../db.js";
+import { logRed } from "../../funciones/logsCustom.js";
+import Favorito from "../../models/favorite.js";
 
 export async function agregarFavorito(usuarioId, manualId) {
     try {

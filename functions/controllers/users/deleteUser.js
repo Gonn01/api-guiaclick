@@ -1,7 +1,5 @@
-import { executeQuery } from "../db/connection.js";
-import { logRed } from "../funciones/logsCustom.js";
-import Usuario from "../models/Usuario.js";
-import Favorito from "../models/Favorito.js";
+import { logRed } from "../../funciones/logsCustom.js";
+import { executeQuery } from "../../db.js";
 
 export async function deleteUser(id) {
     try {

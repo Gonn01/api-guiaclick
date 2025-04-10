@@ -1,10 +1,31 @@
+
 import express from "express";
 import cors from "cors";
 import serverless from "serverless-http";
-import { logBlue, logPurple, logRed } from "./funciones/logsCustom.js";
 import { performance } from "perf_hooks";
-import { verifyParamaters } from "./funciones/verifyParameters.js";
-import { deleteUser } from "./controllers/users/delete_user.js";
+import {
+  logBlue,
+  logPurple,
+  logRed,
+  logGreen
+} from "./funciones/logsCustom.js";
+
+import { verifyParameters } from "./funciones/verifyParameters.js";
+import { verifyAll } from "./funciones/verifyParameters.js";
+
+// Auth
+import { login } from "./controllers/auth/login.js";
+import { registerUser } from "./controllers/auth/registerUser.js";
+import { logoutUser } from "./controllers/auth/logout.js";
+
+// Usuarios
+import { getUserById } from "./controllers/users/getUserById.js";
+import { updateUser } from "./controllers/users/updateUser.js";
+import { deleteUser } from "./controllers/users/deleteUser.js";
+import { getUserFavorites } from "./controllers/users/getUserFavorites.js";
+import { agregarFavorito } from "./controllers/favorites/addFavorite.js";
+import { quitarFavorito } from "./controllers/favorites/removeFavorite.js";
+
 
 var app = express();
 app.use(cors());
@@ -35,11 +56,11 @@ router.post("/api/auth/login", async (req, res) => {
       message: "Inicio de sesión exitoso."
     });
   } catch (error) {
-    console.error(`Error en POST /api/auth/login: ${error.stack}`);
+    logRed(`Error en POST /api/auth/login: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -57,11 +78,11 @@ router.post("/api/auth/register", async (req, res) => {
       message: "Usuario registrado correctamente."
     });
   } catch (error) {
-    console.error(`Error en POST /api/auth/register: ${error.stack}`);
+    logRed(`Error en POST /api/auth/register: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -79,11 +100,11 @@ router.post("/api/auth/logout", async (req, res) => {
       message: "Cierre de sesión exitoso."
     });
   } catch (error) {
-    console.error(`Error en POST /api/auth/logout: ${error.stack}`);
+    logRed(`Error en POST /api/auth/logout: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -104,11 +125,11 @@ router.get("/api/users/:id", async (req, res) => {
       message: "Usuario obtenido correctamente."
     });
   } catch (error) {
-    console.error(`Error en GET /api/users/${id}: ${error.stack}`);
+    logRed(`Error en GET /api/users/${id}: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -128,11 +149,11 @@ router.put("/api/users/:id", async (req, res) => {
       message: "Usuario actualizado correctamente."
     });
   } catch (error) {
-    console.error(`Error en PUT /api/users/${id}: ${error.stack}`);
+    logRed(`Error en PUT /api/users/${id}: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -151,11 +172,11 @@ router.delete("/api/users/:id", async (req, res) => {
       message: "Usuario eliminado correctamente."
     });
   } catch (error) {
-    console.error(`Error en DELETE /api/users/${id}: ${error.stack}`);
+    logRed(`Error en DELETE /api/users/${id}: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -174,11 +195,11 @@ router.get("/api/users/:id/favoritos", async (req, res) => {
       message: "Favoritos obtenidos correctamente."
     });
   } catch (error) {
-    console.error(`Error en GET /api/users/${id}/favoritos: ${error.stack}`);
+    logRed(`Error en GET /api/users/${id}/favoritos: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -194,11 +215,11 @@ router.get("/api/empresas", async (req, res) => {
       message: "Empresas listadas correctamente."
     });
   } catch (error) {
-    console.error(`Error en GET /api/empresas: ${error.stack}`);
+    logRed(`Error en GET /api/empresas: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -217,11 +238,11 @@ router.get("/api/empresas/:id", async (req, res) => {
       message: "Empresa obtenida correctamente."
     });
   } catch (error) {
-    console.error(`Error en GET /api/empresas/${id}: ${error.stack}`);
+    logRed(`Error en GET /api/empresas/${id}: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -240,11 +261,11 @@ router.post("/api/empresas", async (req, res) => {
       message: "Empresa registrada correctamente."
     });
   } catch (error) {
-    console.error(`Error en POST /api/empresas: ${error.stack}`);
+    logRed(`Error en POST /api/empresas: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -264,11 +285,11 @@ router.put("/api/empresas/:id", async (req, res) => {
       message: "Empresa actualizada correctamente."
     });
   } catch (error) {
-    console.error(`Error en PUT /api/empresas/${id}: ${error.stack}`);
+    logRed(`Error en PUT /api/empresas/${id}: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -287,11 +308,11 @@ router.delete("/api/empresas/:id", async (req, res) => {
       message: "Empresa eliminada correctamente."
     });
   } catch (error) {
-    console.error(`Error en DELETE /api/empresas/${id}: ${error.stack}`);
+    logRed(`Error en DELETE /api/empresas/${id}: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -308,11 +329,11 @@ router.get("/api/codigos", async (req, res) => {
       message: "Códigos listados correctamente."
     });
   } catch (error) {
-    console.error(`Error en GET /api/codigos: ${error.stack}`);
+    logRed(`Error en GET /api/codigos: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -330,11 +351,11 @@ router.post("/api/codigos", async (req, res) => {
       message: "Código de acceso generado correctamente."
     });
   } catch (error) {
-    console.error(`Error en POST /api/codigos: ${error.stack}`);
+    logRed(`Error en POST /api/codigos: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -352,11 +373,11 @@ router.get("/api/manuales", async (req, res) => {
       message: "Manuales listados correctamente."
     });
   } catch (error) {
-    console.error(`Error en GET /api/manuales: ${error.stack}`);
+    logRed(`Error en GET /api/manuales: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -374,11 +395,11 @@ router.get("/api/manuales/:id", async (req, res) => {
       message: "Manual obtenido correctamente."
     });
   } catch (error) {
-    console.error(`Error en GET /api/manuales/${id}: ${error.stack}`);
+    logRed(`Error en GET /api/manuales/${id}: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -397,11 +418,11 @@ router.post("/api/manuales", async (req, res) => {
       message: "Manual creado correctamente."
     });
   } catch (error) {
-    console.error(`Error en POST /api/manuales: ${error.stack}`);
+    logRed(`Error en POST /api/manuales: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -420,11 +441,11 @@ router.put("/api/manuales/:id", async (req, res) => {
       message: "Manual actualizado correctamente."
     });
   } catch (error) {
-    console.error(`Error en PUT /api/manuales/${id}: ${error.stack}`);
+    logRed(`Error en PUT /api/manuales/${id}: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -443,11 +464,11 @@ router.delete("/api/manuales/:id", async (req, res) => {
       message: "Manual eliminado correctamente."
     });
   } catch (error) {
-    console.error(`Error en DELETE /api/manuales/${id}: ${error.stack}`);
+    logRed(`Error en DELETE /api/manuales/${id}: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -462,11 +483,11 @@ router.get("/api/manuales/search", async (req, res) => {
       message: "Búsqueda realizada correctamente."
     });
   } catch (error) {
-    console.error(`Error en GET /api/manuales/search: ${error.stack}`);
+    logRed(`Error en GET /api/manuales/search: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -482,11 +503,11 @@ router.get("/api/categorias", async (req, res) => {
       message: "Categorías listadas correctamente."
     });
   } catch (error) {
-    console.error(`Error en GET /api/categorias: ${error.stack}`);
+    logRed(`Error en GET /api/categorias: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -505,11 +526,11 @@ router.post("/api/categorias", async (req, res) => {
       message: "Categoría creada correctamente."
     });
   } catch (error) {
-    console.error(`Error en POST /api/categorias: ${error.stack}`);
+    logRed(`Error en POST /api/categorias: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -529,11 +550,11 @@ router.put("/api/categorias/:id", async (req, res) => {
       message: "Categoría actualizada correctamente."
     });
   } catch (error) {
-    console.error(`Error en PUT /api/categorias/${id}: ${error.stack}`);
+    logRed(`Error en PUT /api/categorias/${id}: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -552,11 +573,11 @@ router.delete("/api/categorias/:id", async (req, res) => {
       message: "Categoría eliminada correctamente."
     });
   } catch (error) {
-    console.error(`Error en DELETE /api/categorias/${id}: ${error.stack}`);
+    logRed(`Error en DELETE /api/categorias/${id}: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -578,11 +599,11 @@ router.get("/api/empresas/:id/manuales", async (req, res) => {
       message: "Manuales de la empresa obtenidos correctamente."
     });
   } catch (error) {
-    console.error(`Error en GET /api/empresas/${id}/manuales: ${error.stack}`);
+    logRed(`Error en GET /api/empresas/${id}/manuales: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -602,11 +623,11 @@ router.post("/api/empresas/:id/manuales", async (req, res) => {
       message: "Manual asignado a la empresa correctamente."
     });
   } catch (error) {
-    console.error(`Error en POST /api/empresas/${id}/manuales: ${error.stack}`);
+    logRed(`Error en POST /api/empresas/${id}/manuales: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -625,11 +646,11 @@ router.delete("/api/empresas/:id/manuales/:manualId", async (req, res) => {
       message: "Manual retirado de la empresa correctamente."
     });
   } catch (error) {
-    console.error(`Error en DELETE /api/empresas/${id}/manuales/${manualId}: ${error.stack}`);
+    logRed(`Error en DELETE /api/empresas/${id}/manuales/${manualId}: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -652,11 +673,11 @@ router.post("/api/usuarios/:id/favoritos", async (req, res) => {
       message: "Manual agregado a favoritos correctamente."
     });
   } catch (error) {
-    console.error(`Error en POST /api/usuarios/${id}/favoritos: ${error.stack}`);
+    logRed(`Error en POST /api/usuarios/${id}/favoritos: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -675,11 +696,11 @@ router.delete("/api/usuarios/:id/favoritos/:manualId", async (req, res) => {
       message: "Favorito eliminado correctamente."
     });
   } catch (error) {
-    console.error(`Error en DELETE /api/usuarios/${id}/favoritos/${manualId}: ${error.stack}`);
+    logRed(`Error en DELETE /api/usuarios/${id}/favoritos/${manualId}: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -700,11 +721,11 @@ router.post("/api/feedback", async (req, res) => {
       message: "Feedback enviado correctamente."
     });
   } catch (error) {
-    console.error(`Error en POST /api/feedback: ${error.stack}`);
+    logRed(`Error en POST /api/feedback: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -717,11 +738,11 @@ router.get("/api/feedback", async (req, res) => {
       message: "Feedback listado correctamente."
     });
   } catch (error) {
-    console.error(`Error en GET /api/feedback: ${error.stack}`);
+    logRed(`Error en GET /api/feedback: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -742,11 +763,11 @@ router.post("/api/valoraciones", async (req, res) => {
       message: "Valoración creada correctamente."
     });
   } catch (error) {
-    console.error(`Error en POST /api/valoraciones: ${error.stack}`);
+    logRed(`Error en POST /api/valoraciones: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -764,11 +785,11 @@ router.get("/api/valoraciones/manuales/:id", async (req, res) => {
       message: "Valoraciones obtenidas correctamente."
     });
   } catch (error) {
-    console.error(`Error en GET /api/valoraciones/manuales/${id}: ${error.stack}`);
+    logRed(`Error en GET /api/valoraciones/manuales/${id}: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -787,11 +808,11 @@ router.put("/api/valoraciones/:id", async (req, res) => {
       message: "Valoración actualizada correctamente."
     });
   } catch (error) {
-    console.error(`Error en PUT /api/valoraciones/${id}: ${error.stack}`);
+    logRed(`Error en PUT /api/valoraciones/${id}: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -810,11 +831,11 @@ router.delete("/api/valoraciones/:id", async (req, res) => {
       message: "Valoración eliminada correctamente."
     });
   } catch (error) {
-    console.error(`Error en DELETE /api/valoraciones/${id}: ${error.stack}`);
+    logRed(`Error en DELETE /api/valoraciones/${id}: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -830,11 +851,11 @@ router.get("/api/sesiones", async (req, res) => {
       message: "Sesiones listadas correctamente."
     });
   } catch (error) {
-    console.error(`Error en GET /api/sesiones: ${error.stack}`);
+    logRed(`Error en GET /api/sesiones: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -852,11 +873,11 @@ router.delete("/api/sesiones/:id", async (req, res) => {
       message: "Sesión terminada correctamente."
     });
   } catch (error) {
-    console.error(`Error en DELETE /api/sesiones/${id}: ${error.stack}`);
+    logRed(`Error en DELETE /api/sesiones/${id}: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 
@@ -872,11 +893,11 @@ router.get("/api/logs", async (req, res) => {
       message: "Logs obtenidos correctamente."
     });
   } catch (error) {
-    console.error(`Error en GET /api/logs: ${error.stack}`);
+    logRed(`Error en GET /api/logs: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    console.log(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
 

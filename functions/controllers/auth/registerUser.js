@@ -1,6 +1,6 @@
-import { executeQuery } from "../db/connection.js";
-import { logRed } from "../funciones/logsCustom.js";
-import Usuario from "../models/Usuario.js";
+import { logRed } from "../../funciones/logsCustom.js";
+import Usuario from "../../models/user.js";
+import { executeQuery } from "../../db.js";
 
 export async function registerUser(nombre, email, password) {
     try {

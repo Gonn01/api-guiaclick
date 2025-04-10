@@ -1,7 +1,6 @@
-import { executeQuery } from "../db/connection.js";
-import { logRed } from "../funciones/logsCustom.js";
-import Usuario from "../models/Usuario.js";
-import Favorito from "../models/Favorito.js";
+import { logRed } from "../../funciones/logsCustom.js";
+import Usuario from "../../models/user.js";
+import { executeQuery } from "../../db.js";
 
 export async function updateUser(id, nombre, email) {
     try {

@@ -1,23 +1,21 @@
 // models/Manual.js
 import { logRed } from "../funciones/logsCustom.js";
 
-class Manual {
-    constructor({ id, titulo, descripcion, contenido, publico, creado_por, creado_en }) {
+export class Manual {
+    constructor({ id, title, description, public: isPublic, created_by, created_at }) {
         this.id = id;
-        this.titulo = titulo;
-        this.descripcion = descripcion;
-        // Se asume que 'contenido' es un JSON almacenado como string o JSONB
-        this.contenido = contenido;
-        this.publico = publico;
-        this.creadoPor = creado_por;
-        this.creadoEn = creado_en;
+        this.title = title;
+        this.description = description;
+        this.public = isPublic;
+        this.createdBy = created_by;
+        this.createdAt = created_at;
     }
 
     static fromJson(json) {
         try {
             return new Manual(json);
         } catch (error) {
-            logRed(`Error en Manual.fromJson: ${error.stack}`);
+            logRed(`Error in Manual.fromJson: ${error.stack}`);
             throw error;
         }
     }
@@ -25,12 +23,11 @@ class Manual {
     toJson() {
         return {
             id: this.id,
-            titulo: this.titulo,
-            descripcion: this.descripcion,
-            contenido: this.contenido,
-            publico: this.publico,
-            creadoPor: this.creadoPor,
-            creadoEn: this.creadoEn,
+            title: this.title,
+            description: this.description,
+            public: this.public,
+            createdBy: this.createdBy,
+            createdAt: this.createdAt,
         };
     }
 }

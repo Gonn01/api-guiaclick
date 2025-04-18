@@ -14,8 +14,12 @@ import { verifyAll } from "./funciones/verifyParameters.js";
 import { agregarFavorito } from "./controllers/favorites/addFavorite.js";
 import { quitarFavorito } from "./controllers/favorites/removeFavorite.js";
 import { listManuales } from "./controllers/manuals/manualList.js";
+import { getManualSteps } from "./controllers/manuals/getManualSteps.js";
 import { getManualById } from "./controllers/manuals/getManualById.js";
 import { listarValoracionesManual } from "./controllers/ratings/getRatingList.js";
+import { isManualFavorite } from "./controllers/manuals/getIfFavorite.js";
+import { addFavorite } from "./controllers/manuals/turnFavorite.js";
+import { removeFavorite } from "./controllers/manuals/removeFavorite.js";
 var app = express();
 app.use(cors());
 app.use(express.json());
@@ -72,6 +76,27 @@ router.get("/api/manuales/:id", async (req, res) => {
     logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
+// GET /api/manuals/:manualId/steps
+router.get("/api/manuals/:manualId/steps", async (req, res) => {
+  const startTime = performance.now();
+  const missing = verifyParameters(req.params, ["manualId"]);
+  if (missing.length > 0) {
+    return res.status(400).json({ message: `Missing required parameters: ${missing.join(", ")}` });
+  }
+
+  const { manualId } = req.params;
+
+  try {
+    const steps = await getManualSteps(manualId);
+    res.status(200).json({ success: true, body: steps });
+  } catch (error) {
+    logRed(`Error in GET /api/manuals/${manualId}/steps: ${error.stack}`);
+    res.status(500).json({ message: error.stack });
+  } finally {
+    const endTime = performance.now();
+    logPurple(`Execution time: ${endTime - startTime} ms`);
+  }
+});
 
 /* ======================
    Endpoints de Favoritos
@@ -120,6 +145,72 @@ router.delete("/api/usuarios/:id/favoritos/:manualId", async (req, res) => {
   } finally {
     const endTime = performance.now();
     logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
+  }
+});
+router.get("/api/users/:userId/favorites/:manualId/check", async (req, res) => {
+  const startTime = performance.now();
+  const missing = verifyParameters(req.params, ["userId", "manualId"]);
+  if (missing.length > 0) {
+    return res.status(400).json({ message: `Missing required parameters: ${missing.join(", ")}` });
+  }
+
+  const { userId, manualId } = req.params;
+
+  try {
+    const isFavorite = await isManualFavorite(userId, manualId);
+    res.status(200).json({ success: true, body: isFavorite });
+  } catch (error) {
+    logRed(`Error in GET /api/users/${userId}/favorites/${manualId}/check: ${error.stack}`);
+    res.status(500).json({ message: error.stack });
+  } finally {
+    const endTime = performance.now();
+    logPurple(`Execution time: ${endTime - startTime} ms`);
+  }
+});
+router.post("/api/users/:userId/favorites/:manualId", async (req, res) => {
+  const startTime = performance.now();
+  const missing = verifyParameters(req.params, ["userId", "manualId"]);
+  if (missing.length > 0) {
+    return res.status(400).json({ message: `Missing required parameters: ${missing.join(", ")}` });
+  }
+
+  const { userId, manualId } = req.params;
+
+  try {
+    await addFavorite(userId, manualId);
+    res.status(200).json({
+      success: true,
+      message: "Manual marked as favorite successfully.",
+    });
+  } catch (error) {
+    logRed(`Error in POST /api/users/${userId}/favorites/${manualId}: ${error.stack}`);
+    res.status(500).json({ message: error.stack });
+  } finally {
+    const endTime = performance.now();
+    logPurple(`Execution time: ${endTime - startTime} ms`);
+  }
+});
+router.delete("/api/users/:userId/favorites/:manualId", async (req, res) => {
+  const startTime = performance.now();
+  const missing = verifyParameters(req.params, ["userId", "manualId"]);
+  if (missing.length > 0) {
+    return res.status(400).json({ message: `Missing required parameters: ${missing.join(", ")}` });
+  }
+
+  const { userId, manualId } = req.params;
+
+  try {
+    await removeFavorite(userId, manualId);
+    res.status(200).json({
+      message: "Manual unmarked as favorite successfully.",
+      body: { userId, manualId }
+    });
+  } catch (error) {
+    logRed(`Error in DELETE /api/users/${userId}/favorites/${manualId}: ${error.stack}`);
+    res.status(500).json({ message: error.stack });
+  } finally {
+    const endTime = performance.now();
+    logPurple(`Execution time: ${endTime - startTime} ms`);
   }
 });
 

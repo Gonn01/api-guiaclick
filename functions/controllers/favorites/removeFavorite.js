@@ -1,3 +1,5 @@
+import { executeQuery } from "../../db.js";
+import { logRed } from "../../funciones/logsCustom.js";
 
 export async function quitarFavorito(usuarioId, manualId) {
     try {

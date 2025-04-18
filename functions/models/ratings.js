@@ -1,21 +1,21 @@
-// models/Valoracion.js
+// models/Rating.js
 import { logRed } from "../funciones/logsCustom.js";
 
 class Rating {
-    constructor({ id, usuario_id, manual_id, puntuacion, comentario, fecha }) {
+    constructor({ id, user_id, manual_id, score, comment, date }) {
         this.id = id;
-        this.usuarioId = usuario_id;
+        this.userId = user_id;
         this.manualId = manual_id;
-        this.puntuacion = puntuacion;
-        this.comentario = comentario;
-        this.fecha = fecha;
+        this.score = score;
+        this.comment = comment;
+        this.date = date;
     }
 
     static fromJson(json) {
         try {
             return new Rating(json);
         } catch (error) {
-            logRed(`Error en Valoracion.fromJson: ${error.stack}`);
+            logRed(`Error in Rating.fromJson: ${error.stack}`);
             throw error;
         }
     }
@@ -23,11 +23,11 @@ class Rating {
     toJson() {
         return {
             id: this.id,
-            usuarioId: this.usuarioId,
-            manualId: this.manualId,
-            puntuacion: this.puntuacion,
-            comentario: this.comentario,
-            fecha: this.fecha,
+            user_id: this.userId,
+            manual_id: this.manualId,
+            score: this.score,
+            comment: this.comment,
+            date: this.date,
         };
     }
 }

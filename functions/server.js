@@ -11,8 +11,6 @@ import {
 } from "./funciones/logsCustom.js";
 import { verifyParameters } from "./funciones/verifyParameters.js";
 import { verifyAll } from "./funciones/verifyParameters.js";
-import { agregarFavorito } from "./controllers/favorites/addFavorite.js";
-import { quitarFavorito } from "./controllers/favorites/removeFavorite.js";
 import { listManuales } from "./controllers/manuals/manualList.js";
 import { getManualSteps } from "./controllers/manuals/getManualSteps.js";
 import { getManualById } from "./controllers/manuals/getManualById.js";
@@ -22,6 +20,7 @@ import { addFavorite } from "./controllers/manuals/turnFavorite.js";
 import { removeFavorite } from "./controllers/manuals/removeFavorite.js";
 import { createRating } from "./controllers/manuals/createRating.js";
 import { deleteRating } from "./controllers/manuals/deleteRating.js";
+import { getUserFavorites } from "./controllers/manuals/getFavorites.js";
 var app = express();
 app.use(cors());
 app.use(express.json());
@@ -104,51 +103,27 @@ router.get("/api/manuals/:manualId/steps", async (req, res) => {
    Endpoints de Favoritos
    ====================== */
 // POST para agregar favorito usa ambos: params y body
-router.post("/api/usuarios/:id/favoritos", async (req, res) => {
+router.get("/api/users/:userId/favorites", async (req, res) => {
   const startTime = performance.now();
-  const missing = verifyAll(req, ["id"], ["manualId"]);
+  const missing = verifyParameters(req.params, ["userId"]);
+
   if (missing.length > 0) {
-    return res.status(400).json({ message: `Faltan los siguientes parámetros: ${missing.join(", ")}` });
+    return res.status(400).json({ message: `Missing required parameter: ${missing.join(", ")}` });
   }
-  const { id } = req.params;
-  const { manualId } = req.body;
+
+  const { userId } = req.params;
+
   try {
-    const result = await agregarFavorito(id, manualId); // Función a definir
-    res.status(200).json({
-      body: result,
-      message: "Manual agregado a favoritos correctamente."
-    });
+    const favorites = await getUserFavorites(userId);
+    res.status(200).json({ success: true, body: favorites });
   } catch (error) {
-    logRed(`Error en POST /api/usuarios/${id}/favoritos: ${error.stack}`);
+    logRed(`Error in GET /api/users/${userId}/favorites: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
-    const endTime = performance.now();
-    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Execution time: ${performance.now() - startTime} ms`);
   }
 });
 
-// DELETE usa solo params
-router.delete("/api/usuarios/:id/favoritos/:manualId", async (req, res) => {
-  const startTime = performance.now();
-  const missing = verifyParameters(req.params, ["id", "manualId"]);
-  if (missing.length > 0) {
-    return res.status(400).json({ message: `Faltan los siguientes parámetros: ${missing.join(", ")}` });
-  }
-  const { id, manualId } = req.params;
-  try {
-    await quitarFavorito(id, manualId); // Función a definir
-    res.status(200).json({
-      body: { usuarioId: id, manualId },
-      message: "Favorito eliminado correctamente."
-    });
-  } catch (error) {
-    logRed(`Error en DELETE /api/usuarios/${id}/favoritos/${manualId}: ${error.stack}`);
-    res.status(500).json({ message: error.stack });
-  } finally {
-    const endTime = performance.now();
-    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
-  }
-});
 router.get("/api/users/:userId/favorites/:manualId/check", async (req, res) => {
   const startTime = performance.now();
   const missing = verifyParameters(req.params, ["userId", "manualId"]);

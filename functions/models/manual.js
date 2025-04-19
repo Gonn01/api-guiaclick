@@ -8,8 +8,8 @@ export class Manual {
         this.description = description;
         this.image = image;
         this.public = isPublic;
-        this.createdBy = created_by;
-        this.createdAt = created_at;
+        this.created_by = created_by;
+        this.created_at = created_at;
     }
 
     static fromJson(json) {
@@ -28,8 +28,8 @@ export class Manual {
             description: this.description,
             image: this.image,
             public: this.public,
-            createdBy: this.createdBy,
-            createdAt: this.createdAt,
+            created_by: this.created_by,
+            created_at: this.created_at,
         };
     }
 }

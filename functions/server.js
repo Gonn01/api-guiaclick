@@ -20,6 +20,8 @@ import { listarValoracionesManual } from "./controllers/ratings/getRatingList.js
 import { isManualFavorite } from "./controllers/manuals/getIfFavorite.js";
 import { addFavorite } from "./controllers/manuals/turnFavorite.js";
 import { removeFavorite } from "./controllers/manuals/removeFavorite.js";
+import { createRating } from "./controllers/manuals/createRating.js";
+import { deleteRating } from "./controllers/manuals/deleteRating.js";
 var app = express();
 app.use(cors());
 app.use(express.json());
@@ -215,27 +217,55 @@ router.delete("/api/users/:userId/favorites/:manualId", async (req, res) => {
 });
 
 /* ======================
-   Endpoints de Valoraciones
+   Endpoints de ratings
    ====================== */
-router.post("/api/valoraciones", async (req, res) => {
+router.post("/api/ratings", async (req, res) => {
   const startTime = performance.now();
-  const missing = verifyParameters(req.body, ["usuarioId", "manualId", "puntuacion"]);
+  const missing = verifyParameters(req.body, ["user_id", "manual_id"]);
+
   if (missing.length > 0) {
-    return res.status(400).json({ message: `Faltan los siguientes parámetros en el body: ${missing.join(", ")}` });
+    return res.status(400).json({ message: `Missing required parameters: ${missing.join(", ")}` });
   }
-  const { usuarioId, manualId, puntuacion, comentario } = req.body;
+
+  const { user_id, manual_id, score, comment } = req.body;
+
   try {
-    const result = await crearValoracion(usuarioId, manualId, puntuacion, comentario); // Función a definir
+    const rating = await createRating({ user_id, manual_id, score, comment }); // see below
     res.status(200).json({
-      body: result,
-      message: "Valoración creada correctamente."
+      message: "Rating created successfully.",
+      body: rating
     });
   } catch (error) {
-    logRed(`Error en POST /api/valoraciones: ${error.stack}`);
+    logRed(`Error in POST /api/ratings: ${error.stack}`);
     res.status(500).json({ message: error.stack });
   } finally {
     const endTime = performance.now();
-    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`Execution time: ${endTime - startTime} ms`);
+  }
+});
+
+router.delete("/api/ratings/:userId/:manualId", async (req, res) => {
+  const startTime = performance.now();
+  const missing = verifyParameters(req.params, ["userId", "manualId"]);
+
+  if (missing.length > 0) {
+    return res.status(400).json({ message: `Missing required parameters: ${missing.join(", ")}` });
+  }
+
+  const { userId, manualId } = req.params;
+
+  try {
+    await deleteRating(userId, manualId); // defined below
+    res.status(200).json({
+      message: "Rating deleted successfully.",
+      body: { user_id: userId, manual_id: manualId }
+    });
+  } catch (error) {
+    logRed(`Error in DELETE /api/ratings/${userId}/${manualId}: ${error.stack}`);
+    res.status(500).json({ message: error.stack });
+  } finally {
+    const endTime = performance.now();
+    logPurple(`Execution time: ${endTime - startTime} ms`);
   }
 });
 

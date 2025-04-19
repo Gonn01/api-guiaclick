@@ -2,13 +2,13 @@
 import { logRed } from "../funciones/logsCustom.js";
 
 class Rating {
-    constructor({ id, user_id, manual_id, score, comment, date }) {
+    constructor({ id, user_id, manual_id, score, comment, created_at }) {
         this.id = id;
         this.userId = user_id;
         this.manualId = manual_id;
         this.score = score;
         this.comment = comment;
-        this.date = date;
+        this.created_at = created_at;
     }
 
     static fromJson(json) {
@@ -27,7 +27,7 @@ class Rating {
             manual_id: this.manualId,
             score: this.score,
             comment: this.comment,
-            date: this.date,
+            created_at: this.created_at,
         };
     }
 }

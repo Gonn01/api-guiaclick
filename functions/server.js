@@ -10,7 +10,6 @@ import {
   logCyan
 } from "./funciones/logsCustom.js";
 import { verifyParameters } from "./funciones/verifyParameters.js";
-import { verifyAll } from "./funciones/verifyParameters.js";
 import { listManuales } from "./controllers/manuals/manualList.js";
 import { getManualSteps } from "./controllers/manuals/getManualSteps.js";
 import { getManualById } from "./controllers/manuals/getManualById.js";

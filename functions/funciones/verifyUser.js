@@ -1,5 +1,4 @@
-import { verify } from 'jsonwebtoken';
-
+import jwt from 'jsonwebtoken';
 const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
 
 export async function verifyUser(req, res, next) {
@@ -12,7 +11,7 @@ export async function verifyUser(req, res, next) {
     const token = authHeader.split(' ')[1];
 
     try {
-        const payload = verify(token, SUPABASE_JWT_SECRET);
+        const payload = jwt.verify(token, SUPABASE_JWT_SECRET);
         req.user = payload;
         next();
     } catch (err) {

@@ -1,6 +1,6 @@
 import { algoliasearch } from 'algoliasearch';
 
-const client = algoliasearch('IQD8SWQI6A', '07b927cb2def710fd9a3c25d1c04a7a2');
+const client = algoliasearch('P7ILDN8BXE', 'ab928c06c91003756c4c623deac711bd');
 
 // Fetch and index objects in Algolia
 const processRecords = async () => {

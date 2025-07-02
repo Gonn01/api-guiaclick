@@ -21,6 +21,7 @@ import { removeFavorite } from "./controllers/manuals/removeFavorite.js";
 import { createRating } from "./controllers/manuals/createRating.js";
 import { deleteRating } from "./controllers/manuals/deleteRating.js";
 import { getUserFavorites } from "./controllers/manuals/getFavorites.js";
+import { verifyUser } from "./funciones/verifyUser.js";
 var app = express();
 app.use(cors());
 app.use(express.json());
@@ -103,7 +104,7 @@ router.get("/api/manuals/:manualId/steps", async (req, res) => {
    Endpoints de Favoritos
    ====================== */
 // POST para agregar favorito usa ambos: params y body
-router.get("/api/users/:userId/favorites", async (req, res) => {
+router.get("/api/users/:userId/favorites", verifyUser, async (req, res) => {
   const startTime = performance.now();
   const missing = verifyParameters(req.params, ["userId"]);
 
@@ -123,7 +124,6 @@ router.get("/api/users/:userId/favorites", async (req, res) => {
     logPurple(`Execution time: ${performance.now() - startTime} ms`);
   }
 });
-
 router.get("/api/users/:userId/favorites/:manualId/check", async (req, res) => {
   const startTime = performance.now();
   const missing = verifyParameters(req.params, ["userId", "manualId"]);
@@ -279,14 +279,3 @@ if (process.env.NETLIFY !== "true") {
 export const handler = serverless(app);
 
 
-
-
-
-const express = require('express');
-const verifyUser = require('./functions/funciones/verifyUser');
-const getFavorites = require('./functions/controllers/manuals/getFavorites');
-
-const app = express();
-app.use(express.json());
-
-app.get('/api/favorites', verifyUser, getFavorites);

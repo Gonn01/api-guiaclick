@@ -277,3 +277,16 @@ if (process.env.NETLIFY !== "true") {
 }
 
 export const handler = serverless(app);
+
+
+
+
+
+const express = require('express');
+const verifyUser = require('./functions/funciones/verifyUser');
+const getFavorites = require('./functions/controllers/manuals/getFavorites');
+
+const app = express();
+app.use(express.json());
+
+app.get('/api/favorites', verifyUser, getFavorites);

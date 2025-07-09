@@ -21,16 +21,136 @@ import { createRating } from "./controllers/manuals/createRating.js";
 import { deleteRating } from "./controllers/manuals/deleteRating.js";
 import { getUserFavorites } from "./controllers/manuals/getFavorites.js";
 import { verifyUser } from "./funciones/verifyUser.js";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import { executeQuery } from "./db.js";
 var app = express();
 app.use(cors());
 app.use(express.json());
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT;
 
 const router = express.Router();
 
 router.get("/", (req, res) => {
   res.send("Hello World!");
+});
+
+
+router.post(
+  '/login',
+  express.json(),    // <— asegúrate de tener el body-parser
+  async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res
+          .status(400)
+          .json({ message: 'Email and password are required' });
+      }
+
+      // 1) Busca el user en la base
+      const qUsers = 'SELECT * FROM users WHERE email = $1';
+      const rows = await executeQuery(qUsers, [email]);
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      const user = rows[0];
+
+      // DEBUG: ver tipos antes de compare
+      console.log({
+        passwordFromBody: String(password),
+        typeOfPassword: typeof password,
+        passwordFromDB: user.password,
+        typeOfPasswordFromDB: typeof user.password,
+      });
+
+      // 2) Compara contraseñas (ambos deben ser strings)
+      const rawPassword = String(password);
+      const hashedPassword = String(user.password);
+      const isValid = await bcrypt.compare(rawPassword, hashedPassword);
+
+      if (!isValid) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      // 3) Genera JWT
+      const JWT_SECRET = process.env.JWT_SECRET;
+      if (typeof JWT_SECRET !== 'string' || JWT_SECRET.trim() === '') {
+        throw new Error('JWT_SECRET is invalid or undefined');
+      }
+
+      const token = jwt.sign(
+        { userId: user.id, role: user.role },
+        JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+
+      // 4) Responde
+      return res.status(200).json({
+        message: 'Login successful',
+        user: {
+          token: token,
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      return res
+        .status(500)
+        .json({ message: 'An error occurred during login: ' + error.message });
+    }
+  }
+);
+
+
+router.post('/users', async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Name, email, password are required' });
+    }
+
+    const nameRegex = /^[a-zA-ZÀ-ÿ\u00f1\u00d1\s'-]+$/;
+    if (!nameRegex.test(name)) {
+      return res.status(400).json({ message: 'Invalid name format' });
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    // 1) Verificar si ya existe
+    const qUsers = 'SELECT * FROM users WHERE email = $1';
+    const existing = await executeQuery(qUsers, [email]);
+    if (existing.length > 0) {
+      return res.status(409).json({ message: 'User already registered' });
+    }
+
+    // 2) Insertar y devolver fila creada
+    const hashed = await bcrypt.hash(password, 10);
+    const qInsert = `
+      INSERT INTO users (name, email, role, password)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, name, email, role
+    `;
+    const result = await executeQuery(qInsert, [name, email, 0, hashed]);
+
+    // Dependiendo de tu wrapper, puede ser result.rows[0] o result[0]
+    const newUser = result.rows ? result.rows[0] : result[0];
+
+    return res.status(201).json({
+      message: 'User registered successfully',
+      data: newUser
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: error.message });
+  }
 });
 
 /* ======================

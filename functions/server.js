@@ -57,14 +57,6 @@ router.post(
       }
       const user = rows[0];
 
-      // DEBUG: ver tipos antes de compare
-      console.log({
-        passwordFromBody: String(password),
-        typeOfPassword: typeof password,
-        passwordFromDB: user.password,
-        typeOfPasswordFromDB: typeof user.password,
-      });
-
       // 2) Compara contraseñas (ambos deben ser strings)
       const rawPassword = String(password);
       const hashedPassword = String(user.password);
@@ -89,12 +81,12 @@ router.post(
       // 4) Responde
       return res.status(200).json({
         message: 'Login successful',
-        user: {
+        body: {
           token: token,
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role,
+          role: user.role * 1,
         },
       });
     } catch (error) {
@@ -144,7 +136,7 @@ router.post('/users', async (req, res) => {
 
     return res.status(201).json({
       message: 'User registered successfully',
-      data: newUser
+      body: newUser
     });
 
   } catch (error) {
@@ -263,6 +255,71 @@ router.get("/api/users/:userId/favorites/:manualId/check", async (req, res) => {
     logPurple(`Execution time: ${endTime - startTime} ms`);
   }
 });
+
+router.post("/api/manuals", async (req, res) => {
+  const startTime = performance.now();
+
+  const required = ["title", "created_by", "steps"];
+  const missing = verifyParameters(req.body, required);
+
+  if (missing.length > 0) {
+    return res.status(400).json({
+      message: `Faltan los siguientes campos requeridos: ${missing.join(", ")}`
+    });
+  }
+
+  const {
+    title,
+    description = null,
+    created_by,
+    public: isPublic = true,
+    image = null,
+    steps
+  } = req.body;
+
+  try {
+    // Insertar el manual
+    const manualResult = await executeQuery(
+      `
+  INSERT INTO manuals (title, description, created_by, public, image)
+  VALUES ($1, $2, $3, $4, $5)
+  RETURNING id
+  `,
+      [title, description, created_by, isPublic, image], true
+    );
+
+
+    const manualId = manualResult[0].id;
+
+    // Insertar los pasos (uno por uno)
+    for (const step of steps) {
+      const { order, title, description, image = null } = step;
+
+      await executeQuery(
+        `
+        INSERT INTO steps (manual_id, "order", title, description, image)
+        VALUES ($1, $2, $3, $4, $5)
+        `,
+        [manualId, order, title, description, image], true
+      );
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Manual y pasos creados correctamente.",
+      manual_id: manualId
+    });
+  } catch (error) {
+    logRed(`❌ Error en POST /api/manuals: ${error.stack}`);
+    res.status(500).json({ message: "Error al crear el manual o sus pasos." });
+  } finally {
+    const endTime = performance.now();
+    logPurple(`🕒 Tiempo ejecución POST /api/manuals: ${endTime - startTime} ms`);
+  }
+});
+
+
+
 router.post("/api/users/:userId/favorites/:manualId", async (req, res) => {
   const startTime = performance.now();
   const missing = verifyParameters(req.params, ["userId", "manualId"]);

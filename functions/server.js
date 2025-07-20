@@ -18,6 +18,7 @@ import { getUserFavorites } from "./controllers/manuals/getFavorites.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { executeQuery } from "./db.js";
+import { processRecords } from "../ns.js";
 var app = express();
 app.use(cors());
 app.use(express.json());
@@ -92,6 +93,137 @@ router.post(
   }
 );
 
+router.get("/api/usuarios", async (req, res) => {
+  const startTime = performance.now();
+  try {
+    const result = await executeQuery(`
+      SELECT id, name, email, role
+      FROM users
+      ORDER BY name
+    `);
+
+    const usuarios = result.map(u => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role === "1" ? "Admin" : "User"
+    }));
+
+    res.status(200).json({
+      body: usuarios,
+      message: "Usuarios listados correctamente."
+    });
+  } catch (error) {
+    logRed(`Error en GET /api/usuarios: ${error.stack}`);
+    res.status(500).json({ message: error.stack });
+  } finally {
+    const endTime = performance.now();
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
+  }
+});
+router.delete("/api/usuarios/:id", async (req, res) => {
+  const startTime = performance.now();
+  const { id } = req.params;
+
+  try {
+    // 1. Eliminar favoritos del usuario
+    await executeQuery(`DELETE FROM favorites WHERE user_id = $1`, [id]);
+
+    // 2. Eliminar valoraciones del usuario
+    await executeQuery(`DELETE FROM ratings WHERE user_id = $1`, [id]);
+
+    // 3. Eliminar pasos de los manuales creados por este usuario
+    await executeQuery(
+      `DELETE FROM steps WHERE manual_id IN (SELECT id FROM manuals WHERE created_by = $1)`,
+      [id]
+    );
+
+    // 4. Eliminar favoritos de esos manuales
+    await executeQuery(
+      `DELETE FROM favorites WHERE manual_id IN (SELECT id FROM manuals WHERE created_by = $1)`,
+      [id]
+    );
+
+    // 5. Eliminar los manuales
+    await executeQuery(`DELETE FROM manuals WHERE created_by = $1`, [id]);
+
+    // 6. Finalmente, eliminar el usuario
+    await executeQuery(`DELETE FROM users WHERE id = $1`, [id]);
+
+    res.status(200).json({ message: "Usuario y sus datos eliminados correctamente." });
+  } catch (error) {
+    logRed(`Error en DELETE /api/usuarios/${id}: ${error.stack}`);
+    res.status(500).json({ message: "Error al eliminar el usuario y sus datos." });
+  } finally {
+    const endTime = performance.now();
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
+  }
+});
+router.delete("/api/manuals/:id", async (req, res) => {
+  const startTime = performance.now();
+  const { id } = req.params;
+
+  try {
+    // Eliminar pasos del manual
+    await executeQuery(`DELETE FROM steps WHERE manual_id = $1`, [id]);
+
+    // Eliminar favoritos asociados al manual
+    await executeQuery(`DELETE FROM favorites WHERE manual_id = $1`, [id]);
+
+    // Eliminar ratings asociados al manual
+    await executeQuery(`DELETE FROM ratings WHERE manual_id = $1`, [id]);
+
+    // Eliminar relaciones con empresas y categorías
+    await executeQuery(`DELETE FROM manual_company WHERE manual_id = $1`, [id]);
+    await executeQuery(`DELETE FROM manual_category WHERE manual_id = $1`, [id]);
+
+    // Finalmente, eliminar el manual
+    await executeQuery(`DELETE FROM manuals WHERE id = $1`, [id]);
+    processRecords();
+    res.status(200).json({ message: "Manual eliminado correctamente." });
+  } catch (error) {
+    logRed(`Error en DELETE /api/manuals/${id}: ${error.stack}`);
+    res.status(500).json({ message: "Error al eliminar el manual." });
+  } finally {
+    const endTime = performance.now();
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
+  }
+});
+
+router.get("/api/manuales-dashboard", async (req, res) => {
+  const startTime = performance.now();
+  try {
+    const result = await executeQuery(`
+      SELECT 
+        m.id,
+        m.title,
+        m.description,
+        m.public,
+        m.image,
+        m.created_at,
+        u.name AS author,
+        COUNT(DISTINCT s.id) AS step_count,
+        COUNT(DISTINCT f.user_id) AS favorites_count
+      FROM manuals m
+      LEFT JOIN users u ON m.created_by = u.id
+      LEFT JOIN steps s ON m.id = s.manual_id
+      LEFT JOIN favorites f ON m.id = f.manual_id
+      GROUP BY m.id, u.name
+      ORDER BY m.created_at DESC
+    `);
+
+    res.status(200).json({
+      body: result,
+      message: "Manuales listados correctamente."
+    });
+  } catch (error) {
+    logRed(`Error en GET /api/manuales: ${error.stack}`);
+    res.status(500).json({ message: error.stack });
+  } finally {
+    const endTime = performance.now();
+    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
+  }
+});
 
 router.post('/users', async (req, res) => {
   try {
@@ -351,7 +483,7 @@ router.post("/api/manuals", async (req, res) => {
         [manualId, order, title, description, image], true
       );
     }
-
+    processRecords();
     res.status(201).json({
       success: true,
       message: "Manual y pasos creados correctamente.",

@@ -3,12 +3,7 @@ import express from "express";
 import cors from "cors";
 import serverless from "serverless-http";
 import { performance } from "perf_hooks";
-import {
-  logBlue,
-  logPurple,
-  logRed,
-  logCyan
-} from "./funciones/logsCustom.js";
+import { logBlue, logPurple, logRed, logCyan, logGreen } from "./funciones/logsCustom.js";
 import { verifyParameters } from "./funciones/verifyParameters.js";
 import { listManuales } from "./controllers/manuals/manualList.js";
 import { getManualSteps } from "./controllers/manuals/getManualSteps.js";
@@ -20,7 +15,6 @@ import { removeFavorite } from "./controllers/manuals/removeFavorite.js";
 import { createRating } from "./controllers/manuals/createRating.js";
 import { deleteRating } from "./controllers/manuals/deleteRating.js";
 import { getUserFavorites } from "./controllers/manuals/getFavorites.js";
-import { verifyUser } from "./funciones/verifyUser.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { executeQuery } from "./db.js";
@@ -215,7 +209,7 @@ router.get("/api/manuals/:manualId/steps", async (req, res) => {
    Endpoints de Favoritos
    ====================== */
 // POST para agregar favorito usa ambos: params y body
-router.get("/api/users/:userId/favorites", verifyUser, async (req, res) => {
+router.get("/api/users/:userId/favorites", async (req, res) => {
   const startTime = performance.now();
   const missing = verifyParameters(req.params, ["userId"]);
 
@@ -235,6 +229,60 @@ router.get("/api/users/:userId/favorites", verifyUser, async (req, res) => {
     logPurple(`Execution time: ${performance.now() - startTime} ms`);
   }
 });
+router.put("/api/manuals/:manualId", async (req, res) => {
+  const startTime = performance.now();
+  const { manualId } = req.params;
+
+  const required = ["title", "description", "image", "public", "steps"];
+  const missing = required.filter((key) => !(key in req.body));
+  if (missing.length > 0) {
+    return res.status(400).json({ message: `Faltan campos: ${missing.join(", ")}` });
+  }
+
+  const { title, description, image, public: isPublic, steps } = req.body;
+
+  try {
+    // Actualizar el manual principal
+    await executeQuery(
+      `
+      UPDATE manuals
+      SET title = $1,
+          description = $2,
+          image = $3,
+          public = $4
+      WHERE id = $5
+      `,
+      [title, description, image, isPublic, manualId]
+    );
+
+    // Eliminar pasos anteriores
+    await executeQuery(`DELETE FROM steps WHERE manual_id = $1`, [manualId]);
+
+    // Insertar nuevos pasos
+    for (const step of steps) {
+      const { order, title, description, image = null } = step;
+      await executeQuery(
+        `
+        INSERT INTO steps (manual_id, "order", title, description, image)
+        VALUES ($1, $2, $3, $4, $5)
+        `,
+        [manualId, order, title, description, image]
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Manual actualizado correctamente"
+    });
+  } catch (error) {
+    logRed(`❌ Error al actualizar manual ${manualId}: ${error.stack}`);
+    res.status(500).json({ message: "Error interno al editar manual." });
+  } finally {
+    const endTime = performance.now();
+    logPurple(`🕒 Tiempo edición manual: ${endTime - startTime} ms`);
+  }
+});
+
 router.get("/api/users/:userId/favorites/:manualId/check", async (req, res) => {
   const startTime = performance.now();
   const missing = verifyParameters(req.params, ["userId", "manualId"]);
@@ -407,6 +455,7 @@ router.delete("/api/ratings/:userId/:manualId", async (req, res) => {
 
   try {
     await deleteRating(userId, manualId); // defined below
+    logGreen(`Rating deleted successfully for user ${userId} and manual ${manualId}`);
     res.status(200).json({
       message: "Rating deleted successfully.",
       body: { user_id: userId, manual_id: manualId }

@@ -263,6 +263,7 @@ router.get("/api/manuales-dashboard", async (req, res) => {
         m.public,
         m.image,
         m.created_at,
+        m.company_id,
         u.name AS author,
         COUNT(DISTINCT s.id) AS step_count,
         COUNT(DISTINCT f.user_id) AS favorites_count
@@ -605,68 +606,80 @@ router.get("/api/users/:userId/favorites/:manualId/check", async (req, res) => {
   }
 });
 
-router.post("/api/manuals", async (req, res) => {
-  const startTime = performance.now();
+router.post(
+  "/api/manuals",
+  express.json(),
+  async (req, res) => {
+    const startTime = performance.now();
 
-  const required = ["title", "created_by", "steps"];
-  const missing = verifyParameters(req.body, required);
-
-  if (missing.length > 0) {
-    return res.status(400).json({
-      message: `Faltan los siguientes campos requeridos: ${missing.join(", ")}`
-    });
-  }
-
-  const {
-    title,
-    description = null,
-    created_by,
-    public: isPublic = true,
-    image = null,
-    steps
-  } = req.body;
-
-  try {
-    // Insertar el manual
-    const manualResult = await executeQuery(
-      `
-  INSERT INTO manuals (title, description, created_by, public, image)
-  VALUES ($1, $2, $3, $4, $5)
-  RETURNING id
-  `,
-      [title, description, created_by, isPublic, image], true
-    );
-
-
-    const manualId = manualResult[0].id;
-
-    // Insertar los pasos (uno por uno)
-    for (const step of steps) {
-      const { order, title, description, image = null } = step;
-
-      await executeQuery(
-        `
-        INSERT INTO steps (manual_id, "order", title, description, image)
-        VALUES ($1, $2, $3, $4, $5)
-        `,
-        [manualId, order, title, description, image], true
-      );
+    // campos obligatorios
+    const required = ["title", "created_by", "steps"];
+    const missing = verifyParameters(req.body, required);
+    if (missing.length > 0) {
+      return res.status(400).json({
+        message: `Faltan los siguientes campos requeridos: ${missing.join(", ")}`
+      });
     }
-    processRecords();
-    res.status(201).json({
-      success: true,
-      message: "Manual y pasos creados correctamente.",
-      manual_id: manualId
-    });
-  } catch (error) {
-    logRed(`❌ Error en POST /api/manuals: ${error.stack}`);
-    res.status(500).json({ message: "Error al crear el manual o sus pasos." });
-  } finally {
-    const endTime = performance.now();
-    logPurple(`🕒 Tiempo ejecución POST /api/manuals: ${endTime - startTime} ms`);
-  }
-});
 
+    // destructuramos, poniendo company_id en null por defecto
+    const {
+      title,
+      description = null,
+      created_by,
+      public: isPublic = true,
+      image = null,
+      steps,
+      company_id = null
+    } = req.body;
+
+    try {
+      // Insertar el manual, ahora con company_id
+      const manualResult = await executeQuery(
+        `
+        INSERT INTO manuals
+          (title, description, created_by, public, image, company_id)
+        VALUES
+          ($1,      $2,          $3,         $4,     $5,    $6)
+        RETURNING id
+      `,
+        [title, description, created_by, isPublic, image, company_id],
+        true
+      );
+
+      const manualId = manualResult[0].id;
+
+      // Insertar los pasos
+      for (const step of steps) {
+        const { order, title: stepTitle, description: stepDesc, image: stepImg = null } = step;
+        await executeQuery(
+          `
+          INSERT INTO steps
+            (manual_id, "order", title, description, image)
+          VALUES
+            ($1,         $2,     $3,    $4,          $5)
+        `,
+          [manualId, order, stepTitle, stepDesc, stepImg],
+          true
+        );
+      }
+
+      // Si tenés alguna función post-proceso
+      processRecords();
+
+      res.status(201).json({
+        success: true,
+        message: "Manual y pasos creados correctamente.",
+        manual_id: manualId
+      });
+    } catch (error) {
+      logRed(`❌ Error en POST /api/manuals: ${error.stack}`);
+      res.status(500).json({ message: "Error al crear el manual o sus pasos." });
+    } finally {
+      const endTime = performance.now();
+      logPurple(`🕒 Tiempo ejecución POST /api/manuals: ${endTime - startTime} ms`);
+    }
+  }
+);
 
 
 router.post("/api/users/:userId/favorites/:manualId", async (req, res) => {

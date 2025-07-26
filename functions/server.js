@@ -34,7 +34,7 @@ router.get("/", (req, res) => {
 
 router.post(
   '/login',
-  express.json(),    // <— asegúrate de tener el body-parser
+  express.json(),
   async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -44,15 +44,20 @@ router.post(
           .json({ message: 'Email and password are required' });
       }
 
-      // 1) Busca el user en la base
-      const qUsers = 'SELECT * FROM users WHERE email = $1';
+      // Buscar al usuario junto con su empresa (si tiene)
+      const qUsers = `
+        SELECT u.*, c.name AS company_name 
+        FROM users u
+        LEFT JOIN companies c ON u.company_id = c.id
+        WHERE u.email = $1
+      `;
       const rows = await executeQuery(qUsers, [email]);
+
       if (rows.length === 0) {
         return res.status(404).json({ message: 'User not found' });
       }
-      const user = rows[0];
 
-      // 2) Compara contraseñas (ambos deben ser strings)
+      const user = rows[0];
       const rawPassword = String(password);
       const hashedPassword = String(user.password);
       const isValid = await bcrypt.compare(rawPassword, hashedPassword);
@@ -61,27 +66,34 @@ router.post(
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
-      // 3) Genera JWT
+      // Verificar JWT_SECRET
       const JWT_SECRET = process.env.JWT_SECRET;
       if (typeof JWT_SECRET !== 'string' || JWT_SECRET.trim() === '') {
         throw new Error('JWT_SECRET is invalid or undefined');
       }
 
+      // Generar token
       const token = jwt.sign(
-        { userId: user.id, role: user.role },
+        {
+          userId: user.id,
+          role: user.role,
+          company_id: user.company_id || null,
+        },
         JWT_SECRET,
         { expiresIn: '1h' }
       );
 
-      // 4) Responde
+      // Respuesta
       return res.status(200).json({
         message: 'Login successful',
         body: {
-          token: token,
+          token,
           id: user.id,
           name: user.name,
           email: user.email,
           role: user.role * 1,
+          company_id: user.company_id || null,
+          company_name: user.company_name || null
         },
       });
     } catch (error) {
@@ -189,7 +201,57 @@ router.delete("/api/manuals/:id", async (req, res) => {
     logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
+router.post("/api/users/:userId/company", async (req, res) => {
+  const startTime = performance.now();
+  const { userId } = req.params;
+  const { code } = req.body;
 
+  if (!code) {
+    return res.status(400).json({ message: "El código es obligatorio." });
+  }
+
+  try {
+    // Verificar si el código es válido
+    const result = await executeQuery(
+      `
+      SELECT company_id 
+      FROM access_codes 
+      WHERE code = $1 
+        AND active = true 
+        AND (expiration_date IS NULL OR expiration_date >= CURRENT_DATE)
+      LIMIT 1
+    `,
+      [code]
+    );
+
+    if (result.length === 0) {
+      return res.status(404).json({ message: "Código inválido o expirado." });
+    }
+
+    const companyId = result[0].company_id;
+
+    // Actualizar el usuario con la empresa
+    await executeQuery(
+      `
+      UPDATE users 
+      SET company_id = $1 
+      WHERE id = $2
+    `,
+      [companyId, userId]
+    );
+
+    res.status(200).json({
+      message: "Usuario vinculado correctamente a la empresa.",
+      company_id: companyId
+    });
+  } catch (error) {
+    logRed(`Error en POST /api/users/:userId/company: ${error.stack}`);
+    res.status(500).json({ message: "Error interno del servidor." });
+  } finally {
+    const endTime = performance.now();
+    logPurple(`POST /api/users/${userId}/company → ${endTime - startTime} ms`);
+  }
+});
 router.get("/api/manuales-dashboard", async (req, res) => {
   const startTime = performance.now();
   try {
@@ -270,7 +332,114 @@ router.post('/users', async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 });
+router.post("/api/empresas/crear", express.json(), async (req, res) => {
+  const { empresa_nombre, admin_nombre, admin_email, admin_password } = req.body;
 
+  if (!empresa_nombre || !admin_nombre || !admin_email || !admin_password) {
+    return res.status(400).json({ message: "Faltan datos obligatorios." });
+  }
+
+  try {
+    // 1. Crear empresa
+    const empresa = await executeQuery(
+      "INSERT INTO companies (name, created_at) VALUES ($1, NOW()) RETURNING id",
+      [empresa_nombre]
+    );
+    const empresaId = empresa[0]?.id;
+
+    // 2. Verificar si ya existe usuario
+    const existe = await executeQuery(
+      "SELECT id FROM users WHERE email = $1",
+      [admin_email]
+    );
+    if (existe.length > 0) {
+      return res.status(409).json({ message: "El email ya está registrado." });
+    }
+
+    // 3. Hashear contraseña
+    const hashed = await bcrypt.hash(admin_password, 10);
+
+    // 4. Crear usuario
+    await executeQuery(
+      `INSERT INTO users (name, email, password, role, company_id, created_at)
+       VALUES ($1, $2, $3, '1', $4, NOW())`,
+      [admin_nombre, admin_email, hashed, empresaId]
+    );
+    processRecords();
+    return res.status(201).json({ message: "Empresa y usuario creados correctamente." });
+  } catch (error) {
+    console.error("Error al crear empresa/usuario:", error);
+    return res.status(500).json({ message: "Error interno del servidor." });
+  }
+});
+router.get("/api/companies/:id", async (req, res) => {
+  const startTime = performance.now();
+  try {
+    const { id } = req.params;
+    const result = await executeQuery(
+      `SELECT id, name, created_at FROM companies WHERE id = $1`,
+      [id]
+    );
+
+    if (result.length === 0) {
+      return res.status(404).json({ message: "Empresa no encontrada" });
+    }
+
+    res.status(200).json({ body: result[0], message: "Empresa encontrada" });
+  } catch (error) {
+    logRed(`Error en GET /api/companies/:id → ${error.stack}`);
+    res.status(500).json({ message: error.message });
+  } finally {
+    logPurple(`GET /api/companies/:id - ${performance.now() - startTime}ms`);
+  }
+});// PUT editar nombre de la empresa
+router.put("/api/companies/:id", express.json(), async (req, res) => {
+  const startTime = performance.now();
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ message: "Nombre inválido" });
+    }
+
+    await executeQuery(`UPDATE companies SET name = $1 WHERE id = $2`, [name, id]);
+
+    res.status(200).json({ message: "Empresa actualizada correctamente" });
+  } catch (error) {
+    logRed(`Error en PUT /api/companies/:id → ${error.stack}`);
+    res.status(500).json({ message: error.message });
+  } finally {
+    logPurple(`PUT /api/companies/:id - ${performance.now() - startTime}ms`);
+  }
+});
+
+// POST generar código de acceso
+router.post("/api/access-codes", express.json(), async (req, res) => {
+  const startTime = performance.now();
+  try {
+    const { company_id } = req.body;
+
+    if (!company_id) {
+      return res.status(400).json({ message: "company_id requerido" });
+    }
+
+    const code = randomCode(6).toUpperCase();
+
+    await executeQuery(
+      `INSERT INTO access_codes (code, company_id, active, expiration_date)
+       VALUES ($1, $2, true, NOW() + INTERVAL '90 days')`,
+      [code, company_id]
+    );
+
+    res.status(201).json({ message: "Código generado", body: { code } });
+  } catch (error) {
+    logRed(`Error en POST /api/access-codes → ${error.stack}`);
+    res.status(500).json({ message: error.message });
+  } finally {
+    logPurple(`POST /api/access-codes - ${performance.now() - startTime}ms`);
+  }
+});
 /* ======================
    Endpoints de Manuales
    ====================== */
@@ -623,7 +792,21 @@ router.get("/api/valoraciones/manuales/:id", async (req, res) => {
     logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
-
+router.get("/api/companies", async (req, res) => {
+  const start = performance.now();
+  try {
+    const result = await executeQuery(`SELECT id, name, created_at FROM companies ORDER BY created_at DESC`);
+    res.status(200).json({
+      message: "Empresas listadas correctamente.",
+      body: result,
+    });
+  } catch (error) {
+    logRed("Error en GET /api/companies: " + error.stack);
+    res.status(500).json({ message: "Error listando empresas: " + error.message });
+  } finally {
+    logPurple(`GET /api/companies demoró ${performance.now() - start} ms`);
+  }
+});
 if (process.env.NETLIFY !== "true") {
   app.use("/.netlify/functions/server", router);
   app.listen(port, () => {
@@ -636,3 +819,11 @@ if (process.env.NETLIFY !== "true") {
 export const handler = serverless(app);
 
 
+export function randomCode(length = 6) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}

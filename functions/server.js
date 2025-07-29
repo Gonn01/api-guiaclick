@@ -109,7 +109,7 @@ router.get("/api/usuarios", async (req, res) => {
   const startTime = performance.now();
   try {
     const result = await executeQuery(`
-      SELECT id, name, email, role
+      SELECT *
       FROM users
       ORDER BY name
     `);
@@ -118,9 +118,11 @@ router.get("/api/usuarios", async (req, res) => {
       id: u.id,
       name: u.name,
       email: u.email,
+      company_id: u.company_id,
+      created_at: u.created_at,
       role: u.role === "1" ? "Admin" : "User"
     }));
-
+    logCyan(`Usuarios obtenidos: ${usuarios}`);
     res.status(200).json({
       body: usuarios,
       message: "Usuarios listados correctamente."
@@ -201,6 +203,34 @@ router.delete("/api/manuals/:id", async (req, res) => {
     logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
   }
 });
+router.delete("/api/companies/:companyId", async (req, res) => {
+  const startTime = performance.now();
+  const { companyId } = req.params;
+
+  try {
+    // Desvincular usuarios de la empresa
+    await executeQuery(
+      `UPDATE users SET company_id = NULL WHERE company_id = $1`,
+      [companyId]
+    );
+
+    // Eliminar la empresa
+    await executeQuery(
+      `DELETE FROM companies WHERE id = $1`,
+      [companyId]
+    );
+
+    res.status(200).json({ message: "Empresa eliminada correctamente." });
+  } catch (error) {
+    logRed(`Error en DELETE /api/companies/${companyId}: ${error.stack}`);
+    res.status(500).json({ message: "Error interno del servidor." });
+  } finally {
+    const endTime = performance.now();
+    logPurple(`DELETE /api/companies/${companyId} → ${endTime - startTime} ms`);
+  }
+});
+
+
 router.post("/api/users/:userId/company", async (req, res) => {
   const startTime = performance.now();
   const { userId } = req.params;

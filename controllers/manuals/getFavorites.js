@@ -9,7 +9,7 @@ export async function getUserFavorites(userId) {
         JOIN manuals m ON m.id = f.manual_id
         WHERE f.user_id = $1
       `;
-        const result = await executeQuery(query, [userId]);
+        const result = await executeQuery(query, [userId], true);
         logGreen(`FavoritesController.getUserFavorites: ${JSON.stringify(result)}`);
         return result;
     } catch (error) {

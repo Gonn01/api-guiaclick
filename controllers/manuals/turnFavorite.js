@@ -8,7 +8,7 @@ export async function addFavorite(userId, manualId) {
         VALUES ($1, $2)
         ON CONFLICT DO NOTHING
       `;
-        await executeQuery(query, [userId, manualId]);
+        await executeQuery(query, [userId, manualId], true);
     } catch (error) {
         logRed(`Error in FavoritesController.addFavorite: ${error.stack}`);
         throw error;

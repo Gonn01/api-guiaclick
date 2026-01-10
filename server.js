@@ -18,7 +18,6 @@ import { getUserFavorites } from "./controllers/manuals/getFavorites.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { executeQuery } from "./db.js";
-import { processRecords } from "./ns.js";
 var app = express();
 app.use(cors());
 app.use(express.json());
@@ -563,6 +562,8 @@ router.get("/api/users/:userId/favorites", async (req, res) => {
 
   try {
     const favorites = await getUserFavorites(userId);
+
+    console.log(favorites)
     res.status(200).json({ success: true, body: favorites });
   } catch (error) {
     logRed(`Error in GET /api/users/${userId}/favorites: ${error.stack}`);

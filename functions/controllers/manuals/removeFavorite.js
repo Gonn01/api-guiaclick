@@ -7,7 +7,7 @@ export async function removeFavorite(userId, manualId) {
         DELETE FROM favorites
         WHERE user_id = $1 AND manual_id = $2
       `;
-        await executeQuery(query, [userId, manualId]);
+        await executeQuery(query, [userId, manualId], true);
     } catch (error) {
         logRed(`Error in FavoritesController.removeFavorite: ${error.stack}`);
         throw error;

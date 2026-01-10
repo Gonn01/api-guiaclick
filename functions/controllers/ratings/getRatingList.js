@@ -10,7 +10,7 @@ export async function listarValoracionesManual(manualId) {
         if (results.length === 0) {
             return [];
         }
-        return results.map(Rating.fromJson).map(v => v.toJson());
+        return results
     } catch (error) {
         logRed(`Error en ValoracionController.listarValoracionesManual: ${error.stack}`);
         throw error;

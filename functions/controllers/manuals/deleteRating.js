@@ -5,9 +5,9 @@ export async function deleteRating(userId, manualId) {
     try {
         const query = `
         DELETE FROM ratings
-        WHERE user_id = $1 AND manual_id = $2
+        WHERE id = $1
       `;
-        await executeQuery(query, [userId, manualId]);
+        await executeQuery(query, [manualId], true);
     } catch (error) {
         logRed(`Error in RatingsController.deleteRating: ${error.stack}`);
         throw error;

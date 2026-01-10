@@ -178,31 +178,42 @@ router.delete("/api/manuals/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
+    // Verificar si existe el manual
+    const manual = await executeQuery(
+      `SELECT id FROM manuals WHERE id = $1`,
+      [id]
+    );
+
+    if (manual.length === 0) {
+      return res.status(404).json({ message: "Manual no encontrado." });
+    }
+
     // Eliminar pasos del manual
     await executeQuery(`DELETE FROM steps WHERE manual_id = $1`, [id]);
 
-    // Eliminar favoritos asociados al manual
+    // Eliminar favoritos asociados
     await executeQuery(`DELETE FROM favorites WHERE manual_id = $1`, [id]);
 
-    // Eliminar ratings asociados al manual
+    // Eliminar ratings asociados
     await executeQuery(`DELETE FROM ratings WHERE manual_id = $1`, [id]);
-
-    // Eliminar relaciones con empresas y categorías
-    await executeQuery(`DELETE FROM manual_company WHERE manual_id = $1`, [id]);
-    await executeQuery(`DELETE FROM manual_category WHERE manual_id = $1`, [id]);
 
     // Finalmente, eliminar el manual
     await executeQuery(`DELETE FROM manuals WHERE id = $1`, [id]);
-    processRecords();
+
+    // Actualizar índice en Algolia
+    await processRecords();
+
     res.status(200).json({ message: "Manual eliminado correctamente." });
   } catch (error) {
     logRed(`Error en DELETE /api/manuals/${id}: ${error.stack}`);
     res.status(500).json({ message: "Error al eliminar el manual." });
   } finally {
     const endTime = performance.now();
-    logPurple(`Tiempo de ejecución: ${endTime - startTime} ms`);
+    logPurple(`DELETE /api/manuals/${id} → ${endTime - startTime} ms`);
   }
 });
+
+
 router.delete("/api/companies/:companyId", async (req, res) => {
   const startTime = performance.now();
   const { companyId } = req.params;

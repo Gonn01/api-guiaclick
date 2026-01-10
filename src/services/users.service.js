@@ -1,3 +1,5 @@
+import { AppError } from "../utils/app_error.js";
+
 export class UsersService {
   constructor({ usersRepository, accessCodesRepository }) {
     this.usersRepository = usersRepository;
@@ -23,16 +25,12 @@ export class UsersService {
 
   async linkUserToCompanyByCode({ userId, code }) {
     if (!code) {
-      const err = new Error("El código es obligatorio.");
-      err.statusCode = 400;
-      throw err;
+      throw new AppError({ message: "El código es obligatorio.", statusCode: 400 });
     }
 
     const row = await this.accessCodesRepository.findValid(code);
     if (!row) {
-      const err = new Error("Código inválido o expirado.");
-      err.statusCode = 404;
-      throw err;
+      throw new AppError({ message: "Código inválido o expirado.", statusCode: 404 });
     }
 
     const companyId = row.company_id;

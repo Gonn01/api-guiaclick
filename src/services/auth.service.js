@@ -1,6 +1,8 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../config/env.js";
+import { AppError } from "../utils/app_error.js";
+import { Roles, normalizeRole } from "../constants/roles.js";
 
 export class AuthService {
   constructor({ usersRepository }) {
@@ -9,35 +11,29 @@ export class AuthService {
 
   async login({ email, password }) {
     if (!email || !password) {
-      const err = new Error("Email and password are required");
-      err.statusCode = 400;
-      throw err;
+      throw new AppError({ message: "Email and password are required", statusCode: 400 });
     }
 
     const user = await this.usersRepository.findByEmailWithCompany(email);
     if (!user) {
-      const err = new Error("User not found");
-      err.statusCode = 404;
-      throw err;
+      throw new AppError({ message: "User not found", statusCode: 404 });
     }
 
     const isValid = await bcrypt.compare(String(password), String(user.password));
     if (!isValid) {
-      const err = new Error("Invalid credentials");
-      err.statusCode = 401;
-      throw err;
+      throw new AppError({ message: "Invalid credentials", statusCode: 401 });
     }
 
     if (typeof JWT_SECRET !== "string" || JWT_SECRET.trim() === "") {
-      const err = new Error("JWT_SECRET is invalid or undefined");
-      err.statusCode = 500;
-      throw err;
+      throw new AppError({ message: "JWT_SECRET is invalid or undefined", statusCode: 500 });
     }
+
+    const role = normalizeRole(user.role);
 
     const token = jwt.sign(
       {
         userId: user.id,
-        role: user.role,
+        role: role ?? Roles.USER,
         company_id: user.company_id || null,
       },
       JWT_SECRET,
@@ -49,7 +45,7 @@ export class AuthService {
       id: user.id,
       name: user.name,
       email: user.email,
-      role: Number(user.role),
+      role: role ?? Roles.USER,
       company_id: user.company_id || null,
       company_name: user.company_name || null,
     };
@@ -57,30 +53,22 @@ export class AuthService {
 
   async register({ name, email, password }) {
     if (!name || !email || !password) {
-      const err = new Error("Name, email, password are required");
-      err.statusCode = 400;
-      throw err;
+      throw new AppError({ message: "Name, email, password are required", statusCode: 400 });
     }
 
     const nameRegex = /^[a-zA-ZÀ-ÿ\u00f1\u00d1\s'-]+$/;
     if (!nameRegex.test(name)) {
-      const err = new Error("Invalid name format");
-      err.statusCode = 400;
-      throw err;
+      throw new AppError({ message: "Invalid name format", statusCode: 400 });
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      const err = new Error("Invalid email format");
-      err.statusCode = 400;
-      throw err;
+      throw new AppError({ message: "Invalid email format", statusCode: 400 });
     }
 
     const exists = await this.usersRepository.existsByEmail(email);
     if (exists) {
-      const err = new Error("User already registered");
-      err.statusCode = 409;
-      throw err;
+      throw new AppError({ message: "User already registered", statusCode: 409 });
     }
 
     const passwordHash = await bcrypt.hash(String(password), 10);
@@ -88,7 +76,7 @@ export class AuthService {
       name,
       email,
       passwordHash,
-      role: 0,
+      role: Roles.USER,
       company_id: null,
     });
 

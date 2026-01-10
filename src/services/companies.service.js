@@ -1,4 +1,6 @@
 import bcrypt from "bcryptjs";
+import { AppError } from "../utils/app_error.js";
+import { Roles } from "../constants/roles.js";
 
 export class CompaniesService {
   constructor({ companiesRepository, usersRepository, algoliaService }) {
@@ -14,18 +16,14 @@ export class CompaniesService {
   async getCompany(id) {
     const company = await this.companiesRepository.getById(id);
     if (!company) {
-      const err = new Error("Empresa no encontrada");
-      err.statusCode = 404;
-      throw err;
+      throw new AppError({ message: "Empresa no encontrada", statusCode: 404 });
     }
     return company;
   }
 
   async updateCompanyName({ id, name }) {
     if (!name || name.trim() === "") {
-      const err = new Error("Nombre inválido");
-      err.statusCode = 400;
-      throw err;
+      throw new AppError({ message: "Nombre inválido", statusCode: 400 });
     }
     await this.companiesRepository.updateName(id, name);
     return true;
@@ -38,16 +36,12 @@ export class CompaniesService {
 
   async createCompanyWithAdmin({ empresa_nombre, admin_nombre, admin_email, admin_password }) {
     if (!empresa_nombre || !admin_nombre || !admin_email || !admin_password) {
-      const err = new Error("Faltan datos obligatorios.");
-      err.statusCode = 400;
-      throw err;
+      throw new AppError({ message: "Faltan datos obligatorios.", statusCode: 400 });
     }
 
     const exists = await this.usersRepository.existsByEmail(admin_email);
     if (exists) {
-      const err = new Error("El email ya está registrado.");
-      err.statusCode = 409;
-      throw err;
+      throw new AppError({ message: "El email ya está registrado.", statusCode: 409 });
     }
 
     const companyId = await this.companiesRepository.createCompany(empresa_nombre);
@@ -57,7 +51,7 @@ export class CompaniesService {
       name: admin_nombre,
       email: admin_email,
       passwordHash: hashed,
-      role: 1,
+      role: Roles.ADMIN,
       company_id: companyId,
     });
 

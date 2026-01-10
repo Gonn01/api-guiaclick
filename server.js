@@ -18,7 +18,7 @@ import { getUserFavorites } from "./controllers/manuals/getFavorites.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { executeQuery } from "./db.js";
-import { processRecords } from "../ns.js";
+import { processRecords } from "./ns.js";
 var app = express();
 app.use(cors());
 app.use(express.json());
@@ -30,7 +30,6 @@ const router = express.Router();
 router.get("/", (req, res) => {
   res.send("Hello World!");
 });
-
 
 router.post(
   '/login',
@@ -861,14 +860,12 @@ router.get("/api/companies", async (req, res) => {
     logPurple(`GET /api/companies demoró ${performance.now() - start} ms`);
   }
 });
-if (process.env.NETLIFY !== "true") {
-  app.use("/.netlify/functions/server", router);
-  app.listen(port, () => {
-    logBlue(`Servidor corriendo en http://localhost:${port}`);
-  });
-} else {
-  app.use('/.netlify/functions/server', router);
-}
+
+app.use("/", router);
+
+app.listen(port, () => {
+  logBlue(`Servidor corriendo en http://localhost:${port}`);
+});
 
 export const handler = serverless(app);
 

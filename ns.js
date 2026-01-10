@@ -4,7 +4,7 @@ const client = algoliasearch('P7ILDN8BXE', 'ab928c06c91003756c4c623deac711bd');
 
 // Fetch and index objects in Algolia
 export const processRecords = async () => {
-    const datasetRequest = await fetch('http://localhost:3000/.netlify/functions/server/api/manuales/');
+    const datasetRequest = await fetch('http://localhost:3000/api/manuales');
 
     const movies = await datasetRequest.json();
     console.log(movies.body);

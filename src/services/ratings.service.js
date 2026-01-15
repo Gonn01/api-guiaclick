@@ -12,7 +12,7 @@ export class RatingsService {
   }
 
   async deleteRating({ userId, manualId }) {
-    await this.ratingsRepository.deleteByUserAndManual(userId, manualId, { log: true });
+    await this.ratingsRepository.deleteByUserAndManual(userId, manualId);
     return true;
   }
 }

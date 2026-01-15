@@ -13,7 +13,7 @@ export class AccessCodesService {
     }
 
     const code = randomCode(6).toUpperCase();
-    await this.accessCodesRepository.create({ code, company_id }, { log: true });
+    await this.accessCodesRepository.create({ code, company_id });
     return code;
   }
 }

@@ -4,7 +4,7 @@ export class FavoritesService {
   }
 
   async getUserFavorites(userId) {
-    return await this.favoritesRepository.listByUser(userId, { log: true });
+    return await this.favoritesRepository.listByUser(userId);
   }
 
   async isManualFavorite(userId, manualId) {
@@ -12,12 +12,12 @@ export class FavoritesService {
   }
 
   async addFavorite(userId, manualId) {
-    await this.favoritesRepository.add(userId, manualId, { log: true });
+    await this.favoritesRepository.add(userId, manualId);
     return true;
   }
 
   async removeFavorite(userId, manualId) {
-    await this.favoritesRepository.remove(userId, manualId, { log: true });
+    await this.favoritesRepository.remove(userId, manualId);
     return true;
   }
 }

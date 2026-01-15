@@ -5,7 +5,7 @@ export class ManualsService {
   }
 
   async listManuales() {
-    return await this.manualsRepository.listPublic({ log: true });
+    return await this.manualsRepository.listPublic();
   }
 
   async getManualById(id) {
